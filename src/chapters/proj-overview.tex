@@ -1,0 +1,153 @@
+
+\chapter{Project Overview}
+\label{chapter:proj-overview}
+
+ELF Detective is a tool that allows to interactively explore the linking process based on executables and the object files that build them. As the project name says, it currently only works with ELF files, which means it's a Linux only project. It provides a highly interactive GUI that is easy to use and understand, making the process of analysing files a lot easier. Further in this chapter we will be present how the program is implemented and the reasoning behind it.
+
+At the moment ELF Detective is a 64-{}bit program only due to library dependencies, but it can work with ELFs compiled for 32-{}bit as well.
+
+\fig[width=\textwidth]{src/img/gui.png}{img:gui-screen}{Function view of ELF Detective}
+
+\section{Use Cases}
+\label{sec:use-cases}
+
+Writing use cases is the most simple and effective way to show the need for a program, as well as presenting how it works and how it can be used. All of the following use cases have the prerequisite that a project was loaded and ran. 
+
+\textbf{Inspect executable and linkable files}. This is the most generic use of the program. After the project was ran, any available data about each file will show in an easy to read format. Inspecting a subset of linkable files is also possible, and all the other symbols that have not been defined in the subset are marked as unknown in the executable panel.
+
+\textbf{Inspect variables}. By clicking on a variable name in the executable file panel, it will highlight its definition in the object file and every information about the variable, from both executable and linkable files, will show. 
+
+\textbf{Inspect functions and their disassembled code}. Similar to inspecting variables, but this also has the option to show a function's code. Each code line is clickable as well, and if there is any relevant information, e.g. if an instruction uses an address, it will show what that address means. 
+
+\textbf{Find external references that can't be solved at link time}. Any external reference will show in the variables container and it will say that is not defined when clicked. 
+
+\textbf{Identify changes that were made at link time}. This is the main goal of the application, by inspecting the symbols and the code lines, it will show the state of that item in both the object and executable files and any difference between its properties, usually the address changes, will be visible.
+
+\section{Building Blocks}
+\label{sec:build-blocks}
+
+In order to present how the project works and behaves as a whole in \labelindexref{Chapter}{chapter:imp-det}, there are some functionalities that need to be explained individually for the sake of clarity. In this section we will present the building blocks of the application in unique subsections in hope of a better understanding of the project implementation.
+
+The most important building blocks of this tool are: the inner representation of the ELF files, the disassembly module, the symbol analysis module and the graphical user interface. The way they work and interconnect can be seen in \labelindexref{Figure}{img:arch-diag}.
+
+\fig[width=\textwidth]{src/img/arch-diag.pdf}{img:arch-diag}{Architectural Diagram}
+
+\subsection{ELF File Representation}
+\label{sub-sec:elf-rep}
+
+The inner representation of the ELF files is the core of this project. To be able to keep this files in an organized manner, the \textbf{Binary File Descriptor}\footnote{\url{https://sourceware.org/binutils/docs-2.26/bfd/index.htmll}} was used to open, parse and extract data that otherwise would be very difficult to do. The ELF file as a unit is a wrapper over the BFD format so that any required data can be cached as it can be seen in \labelindexref{Listing}{lst:elf-code}. As an example, the most used data is the symbol table, which is cached as an array of \textbf{asymbol*} (the BFD representation for symbols, it contains details about the symbol such as name, address, if it is known and a pointer to its section). By caching any frequently used data, it saves a lot of calls to the \textbf{BFD} library, where most of them translate into system calls, and therefore saving resources. 
+
+The data structure representing the ELF files is gradually initialized. Each task that's run before showing any data will add more information to it so that anything can be easily found in a friendly format.
+
+\bigbreak
+\lstset{language=c++,caption=The data cached in the ELFFile class,label=lst:elf-code}
+\begin{lstlisting}
+class ELFFile
+{
+private:
+	bfd *abfd = nullptr;
+	asymbol **syms = nullptr;
+	asymbol **dynsyms = nullptr;
+	asymbol *synthsyms = nullptr;
+	
+	long symcount;
+	long dynsymcount;
+	long synthcount;
+	
+	std::vector<Function *> functions;
+	
+	QWidget *view;
+};
+\end{lstlisting}
+
+\subsection{Disassembly Module}
+\label{sub-sec:dis-mod}
+
+The purpose of this module is to translate the machine code into assembly language and to offer an easy to use API for the GUI. It focuses mainly on the .text section since only functions need to be disassembled. In order to do so, this will find a disassembling function in the system with the help of \textbf{libopcodes}, that will handle the translation.
+
+The output of this module is a complete list of functions from the requested file. Each of these functions contain a list of code lines. A code line has information about the offset, the disassembled line of code, the opcodes and the symbol it references if it does and how it does it. This vector of functions is added to the ELF file representation so that it can be easily accessed by the GUI, without interrogating this module. A skeleton of the code can be seen in \labelindexref{Listing}{lst:dis-code}, and while this is not complete due to the complexity of the actual code, it still represents well how functions form and get in the files.
+
+\bigbreak
+\lstset{language=c++,caption=Disassembly skeleton,label=lst:dis-code}
+\begin{lstlisting}
+Function *f = new Function();
+f->setName(sym->name);
+
+... // gathering all the necessary data for disassembly
+
+while (addr_offset < stop_offset)
+{
+	crtLine = new CodeLine();
+	... // add values to the code line
+	f->addCodeLine(crtLine);
+}
+
+crtFile->addFunction(f);
+\end{lstlisting}
+
+\subsection{Symbol Analysis Module}
+\label{sub-sec:sym-mod}
+
+In order to have an accurate output, without any useless symbols, this module analyse all the files currently open in the project. The simplest way to describe this functionality is as a comparison between the symbols used in the object files and those in the executable file. This means that all the relevant symbols (there's no need for section names or any auxiliary compiler variables) used in the object files will be gathered and filtered for duplicates. If we find any symbol that's used in more than one file, it means that this symbol was defined in only one of those files and for the others it is unknown before link time. For this project there's need only for keeping the defined symbol, and data of where it is not known. After obtaining the symbol collection from the object files, the executable is parsed as well and it adds new data for each symbol that is already in the collection. The way the Hash Map is formed can be seen in \labelindexref{Listing}{lst:sym-code}.
+
+The output is this collection of symbols and all the data regarding them, which means that all the changes that happened during the relocation and address binding phases can be shown. It is represented in a Hash Map so a symbol can be easily found when asked by the GUI.
+
+\bigbreak
+\lstset{language=c++,caption=Symbol selection from object files,label=lst:sym-code}
+\begin{lstlisting}
+for (ELFFile *E : objfiles) {
+  current = E->getSyms();
+  
+  for (int i = 0; i < E->getSymcount(); ++i) {
+    Symbol entry;
+    ... // check current symbol for validity
+    if (bfd_is_und_section((*current)->section)) {
+      ... // checks for symbol
+      entry.undefined_in.push_back(E->getName());
+    }
+    else {
+      entry.name = bfd_asymbol_name(*current); 
+      entry.defined = true;
+      entry.defined_in = E->getName();
+      entry.def_value = bfd_asymbol_value(*current);
+      entry.defined_section = (*current)->section->name;
+      entry.def_section_value = bfd_asymbol_base(*current);
+      
+      symbolTable[name] = entry
+    }
+  }
+}
+\end{lstlisting}
+
+\subsection{Graphical User Interface}
+\label{sub-sec:gui-mod}
+
+The GUI is what makes this project unique and gives it a purpose. It is implemented with Qt\footnote{\url{https://www.qt.io/qt-framework/}} (initially version 5.5, now updated to 5.6), a C++ framework, which allows easy integration of a project with a graphical interface, with easy to catch events and drag and drop interface design. This framework allowed the program to be highly interactive and easy to use. The GUI shows the executable and the object files (placed in tabs) side by side for easy comparison. Each ELF file have two accordion items, 'Data' and 'Functions', containing information from both the disassembly and the symbol analysis modules. The 'Data' page holds information about variables and symbols that are unknown at link time (e.g. a call to printf). By clicking on any item, it will select the tab of the corresponding object file, it will highlight the symbol declaration that tab and it will show every information about the symbol, from both executable and object files. The 'Functions' page shows a list of expandable function names. By expanding a function, it will show the disassembly code. The clicking behaviour is similar to the 'Data' page one. The code lines shown here can be changed into opcodes by clicking on the check box 'Hexcodes'.
+
+Adding files, running or clearing the project are easy tasks as well due to buttons designed with suggestive icons, which have shortcuts as well for a more advanced user.
+
+The design of the GUI was implemented with \textbf{XML} and \textbf{Qt Style Sheet}\footnote{\url{http://doc.qt.io/qt-4.8/stylesheet.html}}, or \textbf{QSS}, which is a powerful style language that allows the customization of Qt widgets. A sample of what it looks like is presented in \labelindexref{Listing}{lst:gui-code}
+
+\bigbreak
+\lstset{language=c++,caption=Style of a QTreeView -{} the function container -{},label=lst:gui-code}
+\begin{lstlisting}
+QTreeView::branch:selected {
+	background: #99ff99;
+}
+QTreeView::branch:selected:active {
+	background: #99ff99;
+}
+QTreeView::branch:has-children {
+	image: url(icons/icon-arrow-right.ico);
+}
+QTreeView::branch:has-children:!closed {
+	image: url(icons/icon-arrow-down.ico);
+}
+QTreeView::item:selected,
+QTreeView::item:selected:!active {
+	background: #99ff99;
+	color: #000;
+}
+\end{lstlisting}
+
+The GUI was the most discussed topic during the testing phase since the project targets unexperienced users and for that it has to have a great user experience design. Most of the feedback we received from the testers can be seen in \labelindexref{Section}{sec:feedback}.

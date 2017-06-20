@@ -1,0 +1,27 @@
+
+\chapter{Conclusion}
+\label{chapter:conc}
+
+In this work we have developed an interactive tool that can explore the depths of the linking process. Every requirement was met and surpassed, the project offering more than it was asked for. It can open and inspect both 32-{}bit and 64-{}bit ELFs, it can analyse the contents from these files and create links between matching data, it can disassemble every relevant function and it offers a full functional graphical interface that allows the user to interact easily with the program.
+
+The project can be easily extended with more modules and even more functionality, which are not platform specific, and it's not very hard to make it usable on operating systems others than Linux and by inspecting different formats for executable and linkable files.
+
+In \labelindexref{Chapter}{chapter:testing} were presented all kind of different tests, from basic user interaction to numerical data, and all the test results led to a positive outcome. ELF Detective works correctly, provides complete data, is very interactive and scales well. Another quality that came out of the beta testing phase was that the project is eye-{}candy, it feels great and looks user friendly. 
+
+As in the case of most projects, this one can be also improved. We will present the ways of how this can be done in \labelindexref{Section}{sec:furth-work}, in an ordered manner.
+
+
+\section{Challenges}
+\label{sec:chal}
+
+To our knowledge, this project is the first of its kind on Linux and therefore there is no imposed standard for it. There are quite a few interactive tools with similar background, but they could not be considered as a standard since their focus is too different and so, the biggest challenge was trying to create a standard that it's simple enough to implement in a short period of time, but also elaborate so it can have a purpose. While developing a standard, we had to decide on the best way to implement the project without using wrappers over existing tools since this is never a safe option. We studied most of the available Linux tools that handle ELF files to see how they were implemented and see if anything useful can be found, and this way, the core libraries used in this project were found, BFD and opcodes.
+
+These collections were both a relief and a challenge. Both were written many years ago, not very well documented, but very powerful. It was challenging to find what was needed in these  libraries since the only option was to search throughout the files in order to find something useful because their documentation, which was an incomplete list of functions. The next challenge was finding a good way to use the API. This is not exemplified anywhere, so the only choice was, once again, to read and understand the code of the existing tools that use these libraries.
+
+
+\section{Lessons Learned}
+\label{sec:less-learned}
+
+The most important thing I learned while implementing this project was to not take everything I use for granted. I was used to have a well written documentation to any API I had to use, and if something was not clear, I always had someone that knew the API good enough to explain it. This was not the case here.
+
+Another thing that I learned during this program was working on my own on a bigger scale project, where I had to take all the decisions. Some were good, but many were bad and I had to find solutions for them. This was the most enjoyable part of this journey, making decision that were to turn bad on the longer run.

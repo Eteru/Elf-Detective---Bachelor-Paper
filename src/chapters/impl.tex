@@ -1,0 +1,47 @@
+
+\chapter{Implementation Details}
+\label{chapter:imp-det}
+
+Now that we explained all the modules of the project, we will start describing the program as a whole. We chose C++ for implementing ELF Detective due to its compatibility with low level C libraries, as well as its offering of high level data structures and libraries. The core data structure is the \textbf{ELFFile} which is the representation of the ELF files.
+
+Since reinventing the wheel is almost never a good idea, we decided to base our work on another open source project, \textbf{objdump}. Some of its code was used, but it was  modified and added some more to make it more specific for this project, for the disassembly module. Also, objdump's code was our main source of learning how the bfd library works, since its documentation is not very helpful.
+
+To inspect a project with ELF Detective is pretty easy. You first have to add an executable file (CTRL + E) and the linkable files (CTRL + O), it is not required to add all of them since it can work an a subset as well. After everything the user added all the files and it initialised the internal data structures, the project can be ran (CTRL + R) and all the buttons allowing to add more files will be disabled.
+
+Symbol analysis module is the first to run after the initialisation of these structures. It will not modify the state of the files, but merely interrogate them to gather symbol information. After its execution, it will have a \textbf{Hash Map} of \textbf{Symbols}, a class that keeps information about symbols, that will be used by the GUI functionality.
+
+The disassembly module is the next to run. It will add to each file its corresponding vector of \textbf{Function}s that holds any needed data, including the code. The GUI expects this vector to be initalised in all the files, after the project ran.
+
+The GUI inspect functionality expects that all the data was gathered and it can be found. For almost every task, it inspects the Hash Map containing symbols or the ELFFile's vector of functions to obtain the required information to display.
+
+By clearing the project (CTRL + C), it will release all the stored data, free the memory and delete the specific GUI elements. The buttons that allow to add more files and the run button will be active again, allowing a new project to be inspected.
+
+The tools used for the implementation of this project will be presented in the next section.
+
+\section{Implementation Tools}
+\label{sec:imp-tools}
+
+This section will cover the libraries and frameworks used for implementation. Some of them have already been mentioned while explaining the building blocks, but a better understanding of them is needed by anyone reading this paper.
+
+\subsection{Binary File Descriptor library}
+\label{sub-sec:bfd}
+
+The BFD package is part of the \textbf{GNU Project}\footnote{\url{https://www.gnu.org/gnu/thegnuproject.html}} and represents a mechanism that offers binary file manipulation. It supports multiple file formats on many processor architecture\footnote{As of 2013, it supports around 50 file formats for 25 processor architectures}. Its main goal is to present a common abstract view of the binary files. For this to happen, it needs to translate from binary data to the abstract view and the other way around. It takes into consideration details like the endianness, the architecture for which the file was compiled for, address arithmetic etc. This is what they present as "BFD is split into two parts: the front end, and the back ends (one for each object file format)."\footnote{\url{https://sourceware.org/binutils/docs/bfd/Overview.html}}.
+
+For this project, the only thing of interest was the front end of BFD. This provides an API that allows easy access to symbols, sections, relocation entries and all of their characteristics. This together with \textbf{libiberty}\footnote{\url{https://gcc.gnu.org/onlinedocs/libiberty/Overview.html}}, a library that will not be presented separately, allowed the clean and secure access to any properties of the binary file that were needed.
+
+Alongside \textbf{libopcodes}, another library that will not be presented here since it usually comes with the operating system, BFD can be used to parse the disassembly data received from the opcodes library.
+
+\subsection{ELF Headers}
+\label{sub-sec:elf-headers}
+
+We found these ELF headers in the project files of \textbf{objdump} and they represent part of the back ends of BFD. There's one header for each supported architecture the installs usually configure to use the corresponding file.
+
+For this project, we used only the most generic headers, but all the other ones are available as well. This means that the project can be extended for any architecture that is supported by BFD.
+
+\subsection{Qt}
+\label{sub-sec:qt}
+
+Qt is a cross-platform framework used for GUI implementation. Qt extends C++ with signals and slots that simplify how events are handled, making it easier to create core functionalities of the interface. By using \textbf{Qt Creator IDE}\footnote{\url{https://www.qt.io/ide/}} the development of a GUI becomes a lot easier. It has a drag and drop interface that allows the user to add and arrange items easily, and by right clicking on any widget one gains access to the slots, descriptions, tool tips and even widget design.
+
+ELF Detective was designed using the Qt Creator IDE and the Qt 5.6 library.

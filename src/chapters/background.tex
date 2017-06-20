@@ -1,0 +1,96 @@
+
+\chapter{Background}
+\label{chapter:bkg}
+
+ELF files have mostly the same structure since they were created and anything new comes by extension, leaving the format unchanged. Since they never change, it is understandable that any tools that read/inspect/analyse these files had no reason to be modernised.
+
+There are many applications that offer a great overview of binary files, such as \textbf{IDA}\footnote{\url{https://www.hex-rays.com/products/ida/}}, but each of them have a different purpose. Many of these are debuggers or useful for reverse engineering, and are not friendly enough for an unexperienced user. To our knowledge, ELF Detective is the first of its kind because it can handle ELF files just as well as any other existing program, but its focus is to find connections between files that may have been changed during the linking stage and to provide an educational insight of these changes. More information on this topic will be discussed in \labelindexref{Section}{sec:tott}.
+
+In the following sections, we will explain the basic concepts of the project, in the interest of focusing more on the application itself later on.
+
+\section{Linkable Files}
+\label{sec:l-files}
+
+Linkable files, also known as object files, result from compilation. Each of these files represents the translation of a source file into machine code. Even though they are not usually executable, their importance come from their structure, which defines how the executable file will look like. The most important elements of a linkable file are the \textbf{symbols} and the \textbf{sections}. Symbols represent references to memory addresses, usually where we define variables or functions, in a program. Sections help organizing the object file by category. The most important sections are the code (.text), initialized data (.data) and uninitialized data (.bss). In object files, the address range of sections start at zero because their actual program addresses are unknown before de linking stage. The process of how object files are linked together will be covered separately. 
+
+\section{Executable Files}
+\label{sec:e-files}
+
+Executable files result from the linking stage. The combination of object files lead to executables, they they must be merged in such a way that all the references between them have been resolved. They have a similar structure to the linkable files, but every section's start address now points to a unique location in the program memory map and every symbol can be found at a concrete unique address. Having only one file with these characteristics and a few others, e.g. having a start address, allows these files to be executed and launch the program.
+
+\section{Linking Process}
+\label{sec:link-proc}
+
+The most simple explanation for the linking process is as a stage that combines linkable files into one executable file, as it can be seen in \labelindexref{Figure}{img:link-diag}. As a more complex view, object files can be seen as collections of uninitialized sections that need to be grouped and initialized. This sounds easy because most of it is, but there are two cases where this gets a bit complicated. An object file can use at any point a function call that is part of another file or even reference an external variable, and the only way for either of these to work is by knowing the symbol address, which is unknown before link time.
+
+This task got easier over the years due to virtual memory, all running programs get the same, fixed amount of memory ($2^{N}$, N being 32 or 64 for modern architectures), which allows the linker to use the same address range for each program that starts at zero.
+
+Since it seems like the linker is in charge of two separate things, merge the object files and initialize the addresses, it was only logical that the linking process should be split in two stages, \textbf{relocation} and \textbf{address binding}, which are covered in the next subsections.
+
+\fig[scale=0.7]{src/img/link-diag.pdf}{img:link-diag}{A diagram of the linking process}
+
+\subsection{Relocation}
+\label{sub-sec:reloc}
+
+Relocation is the first stage of linking and has the purpose of merging the object files by combining the sections of the same type (.data, .text, .bss etc.) to create the same section of the executable file. After all the required data has been placed in the executable file, the only thing left to do in this phase is to initialize each section. All the previously zero-{}based address ranges of sections get translated into real addresses in the executable file. A visual explanation of this stage can be seen in \labelindexref{Figure}{img:reloc-diag}.
+
+\fig[scale=0.6]{src/img/reloc-diag.pdf}{img:reloc-diag}{A relocation example}
+
+\subsection{Address Binding}
+\label{sub-sec:addr-bind}
+
+Address binding has to deal with the complicated part of linking. As stated earlier, there are references to symbols that are unknown at this time and they need to be solved. Establishing these connections between different parts of the program is what makes the executable homogenous.
+
+According to the book "C and C++ Compiling" by Milan Stevanovic\cite{milan}, to solve this issues, the linker must:
+
+\begin{itemize}  
+	\item Examine the sections as resulted from relocation
+	\item Find the code that calls outside of its original section
+	\item Find the exact address of the referenced symbol
+	\item Replace the default address with the actual one
+\end{itemize}
+
+\section{Tools of the Trade}
+\label{sec:tott}
+
+It is important to present the tools of the trade because it shows the need for a project like the one we present in this paper. These tools are old and require human reasoning to completely understand their output, since they present a lot of information, but in a raw format showed in the terminal.
+
+The most generic tools that handle ELFs are: \textbf{objdump}\footnote{\url{https://sourceware.org/binutils/docs/binutils/objdump.html}}, \textbf{readelf}\footnote{\url{https://sourceware.org/binutils/docs/binutils/readelf.html}}, \textbf{nm}\footnote{\url{https://sourceware.org/binutils/docs/binutils/nm.html}}, \textbf{addr2line}\footnote{\url{https://sourceware.org/binutils/docs/binutils/addr2line.html}}, tools provided by the same package (binutils), which rarely gets an update. These tools are revised only for bug fixes or tweakings of the display format. As a result of their age they're heavily used and well known, but due to the shortage of updates over the time they became outmoded. They have a minimum level of interactivity, which means that based on the what we ask for, they answer with some raw data and nothing more. This is not really an issue for more advanced users, but they are less appreciated by anyone that wants to get better at understanding ELFs and, even if you have a good knowledge of how they work, you still need to analyse the output and connect the dots in between to find the answer you were looking for. These tool do not allow to inspect multiple files at once and will show incomplete information when it comes to external symbols and even some function calls.
+
+As an example, we present the output of \textbf{nm -{}-{}format sysv} in \labelindexref{Listing}{lst:nm-output}, which is the prettiest output of what these tools offer. These are the symbols from an object file as seen by nm. This file has a lot of external symbols and function calls to other files, and nm, or any other tool mentioned earlier, cannot get any information about them because they do not cross reference with any other files. It can be easily seen that for most of these symbols there is nothing that can be said beside that they are part of section \textbf{*UND*}, which means a symbol is undefined, that they are of \textbf{NOTYPE} and don't have any values. This clearly demonstrates that these tools are not very useful in exploring the linking process, not even in inspecting a single file and finding complete information, and they are even worse if we consider how they look to a student that tries to learn more about linking.
+\bigbreak
+\lstset{language=make,caption=Output of nm -{}-{}format sysv,label=lst:nm-output}
+\begin{lstlisting}
+Name   Value   Class  Type    Size    Line     Section 
+cyktj |        |   U | NOTYPE|        |        |*UND* 
+ebp   |        |   U | NOTYPE|        |        |*UND* 
+fsjg  |        |   U | NOTYPE|        |        |*UND* 
+gabk  |        |   U | NOTYPE|        |        |*UND* 
+gjnjw |        |   U | NOTYPE|        |        |*UND* 
+gvd   |        |   U | NOTYPE|        |        |*UND* 
+hoe   |00000004|   C | OBJECT|00000004|        |*COM* 
+iyn   |        |   U | NOTYPE|        |        |*UND* 
+main  |00000000|   T |   FUNC|00000083|        |.text 
+mfg   |        |   U | NOTYPE|        |        |*UND* 
+oj    |        |   U | NOTYPE|        |        |*UND* 
+qeycz |        |   U | NOTYPE|        |        |*UND* 
+qfrta |        |   U | NOTYPE|        |        |*UND* 
+qsmml |00000004|   C | OBJECT|00000004|        |*COM* 
+rloi  |        |   U | NOTYPE|        |        |*UND* 
+rmzk  |        |   U | NOTYPE|        |        |*UND* 
+siu   |        |   U | NOTYPE|        |        |*UND* 
+tvyu  |00000083|   T |   FUNC|0000015f|        |.text 
+txc   |00000004|   C | OBJECT|00000004|        |*COM* 
+uocfq |        |   U | NOTYPE|        |        |*UND* 
+vgceb |        |   U | NOTYPE|        |        |*UND* 
+yb    |        |   U | NOTYPE|        |        |*UND* 
+ytlt  |00000000|   b | OBJECT|00000004|        |.bss
+
+\end{lstlisting}
+
+Alongside these generic tools, there are plenty more specific programs that work very well, but only implement a specific subset of functionalities. These are tools with a high level of interactivity, but they do not serve any educational purpose since they are mainly used for debugging, cracking and reverse engineering. A few of these tools are:
+
+\begin{itemize}  
+	\item Hex editor: \textbf{Bless}\footnote{\url{http://home.gna.org/bless/}}, \textbf{wx Hex Editor}\footnote{\url{http://www.wxhexeditor.org/}}
+	\item Disassembly and reverse engineering: \textbf{Radare 2}\footnote{\url{http://radare.org/r/}}, \textbf{IDA}
+\end{itemize}

@@ -1,0 +1,97 @@
+
+\chapter{Testing}
+\label{chapter:testing}
+
+%The testing phase is as important as project design and implementation. Without testing the program there would be no evidence that it respects all the requirements, that it has correct results or if it works well. 
+
+The tests were conducted using randomly generated C projects of up to 20 object files. In the next sections, these tests will be presented in a top -{} down manner, from the look and feel of the program to exact measurements of the functionality.
+
+Besides our tests, some other people, colleagues and some bachelor students from the Faculty of Automatic Controls and Computers, helped us to have a beta testing phase in which they tested the project in any way they wanted to, using the test generator or running their own projects. The feedback that was obtained from them was very helpful, and so, we were able to make the program run better and feel easier to use. Some of their feedback will be presented in \labelindexref{Section}{sec:look-feel}.
+
+\section{Test Generator}
+\label{sec:test-gen}
+
+In order to eliminate the human error out of the equation, it felt like having randomly generated tests that use the items of interested for this project, external symbols and functions calls to other object files, would be the best solution. This test generator is a Python\footnote{\url{https://www.python.org/}} script that generates C files with random amount of symbols, from which a random amount are functions and the rest are variables. The variables have a random keyword between \textbf{const}, \textbf{static}, \textbf{extern} or none.
+
+As it can be seen in the code snippet below, the script generates symbols for each file. It starts with the generation of unique symbol names, each one gets additional attributes such as a type, variable or function, and a keyword. The script is hardcoded to generate a bigger amount of extern variables since they are of interest. The functions bodies are generated while writing the C files since all symbols must be known in order to reference some from other files.
+\bigbreak
+\lstset{language=python,caption=Core code of the test generator,label=lst:test-gen-code}
+\begin{lstlisting}
+for i in range(files_no):
+	symbols[i] = generate_symbols(i)
+
+	for sym in symbols[i]:
+		if sym['Name'] == "main":
+			continue 
+		
+		if randint(0,1) == 0:
+			sym['Type'] = VARIABLE 
+			sym['Keyword'] = external 
+			external_symbols.append(sym) 
+		else: 
+			sym['Type'] = randint(0,1) 
+			sym['Keyword'] = keywords[randint(0,2)] if sym['Type'] == 0 else "" 
+		
+		if sym['Type'] == FUNCTION: 
+			external_symbols.append(sym)
+
+for i in range(files_no):
+	generate_file(i)
+\end{lstlisting}
+
+The resulting files are compiled and linked, creating the input for the application to inspect.
+
+\section{Look and Feel}
+\label{sec:look-feel}
+
+ELF detective aims to be a highly interactive project and this requires an interface that looks friendly and easy enough to use so that it can be learned at first use. To reach this goal, each file can be seen on its own, the executable has it's own panel and the object files are separated into tabs, the data is partitioned into expandable items, the hex code check box is positioned in an easy to view spot, and the buttons show as icons that represent their functionality well. For each of those button there is a small explanation pop-{}up showing at hover, and all of them have keyboard shortcuts so it can be easier to use. 
+
+The output shows at the bottom of the GUI in two columns representing the executable file and the active object file. It presents each line of output in both columns showing the data from each of those files, and has just enough information to make it clear and not show too much text.
+
+The look and feel of the project was a matter of discussion during beta testing and some of the received feedback was used to increase the level of interactivity of the program. This feedback can be found in \labelindexref{Section}{sec:feedback}.
+
+\section{Correctness}
+\label{sec:correctness}
+
+The most important part of this project was to respect all the specifications. The main requirements were for the program to be interactive, this was discussed in \labelindexref{Section}{sec:look-feel}, to list all the symbols in the project, to allow inspection of functions bodies and to provide insight of what changes during linking for any of this information.
+
+With regard to making sure that all of this data is correct, the best alternative was to cross reference it to what any other tool of the trade can display. By generating random tests and comparing the output of ELF Detective to what the other tools show, it confirmed that all the data shown by this project was in fact correct, and every missing data was intentional.
+
+\section{Evaluation}
+\label{sec:eval}
+
+In order to evaluate the project in a proper manner we have used different projects for up to 20 object files and the corresponding executable. As stated earlier, all of these projects were randomly generated and had the focus mainly on the use of external variables and function calls to different files.
+
+\fig[width=\textwidth]{src/img/grafic-timp-parsare.pdf}{img:graf-cmp}{Comparision between ELF Detective and objdump -{}dt}
+
+For a better insight, the response time of objdump -{}dt, -{}d disassembles the executable sections and -{}t shows the symbols, was tested, with and without any output, and put the results on a chart, shown in \labelindexref{Figure}{img:graf-cmp}, along the data of ELF Detective. The response times of ELF Detective were obtained by using the C++ clock()\footnote{\url{http://www.cplusplus.com/reference/ctime/clock/}} function which allows to compute the total time spent between 2 calls of this function. The time was tested only for the "Project Run" command, which means that the files were already added into the program. For objdump,  \textbf{time}\footnote{\url{http://linux.die.net/man/1/time}} command was used. The data that shows on the chart was collected by testing each command 10 times and computing the average of the real time.
+
+The testing environment was an Ubuntu 14.04 virtual machine with 2 GB of 1600 MHz DDR3 RAM and 2 x 3.40 GHz CPU cores. 
+
+As it shows on this chart, ELF Detective is scaling well with the number of files compared to objdump. It seems that the bottleneck of objdump is presenting the output, but the functionality it’s faster than ELF Detectives, which is to be expected. Considering that ELF Detective parses the raw data and shows it in an interactive GUI, having such a low response time that seems to be instant for the human eye, makes the program look as interactive as it should.
+
+The next important thing that needed to be tested was how long it takes for each module to run. This was tested for a 20 object files and one executable file project, and it was run multiple times. The data in the pie chart from \labelindexref{Figure}{img:module-cmp} is the average of these runs. Same as before, this was tested after running the project since this is the moment when all these module come in play, so 100\% of the chart means the full run of the project.
+
+\fig[width=\textwidth]{src/img/grafic-timp-module.pdf}{img:module-cmp}{Time spent by each module}
+
+As it can be seen, initializing the files and running a symbol analysis module takes very little time. They only initialize the internal structure of each file and parses it, finding every relevant symbol. The bottleneck here is the disassembly module. It takes more than 72\% of the time, because after receiving the raw data it has to do some string manipulations in order to offer easy access to any information and it has to create some inner connections between some code lines. The GUI take a fair amount of time as well, but this is to be expected. There is a lot of data that needs to show up in the GUI, some that it’s not even available at the default screen, e.g. the instruction opcodes, and there are a lot of connections that need to be solved "behind the scenes".
+
+The last thing that needs to be tested is the GUI response time when clicking on a symbol or a line of code. This can be found in \labelindexref{Figure}{img:wbc}. For each category, the best and the worst case scenario were found. The best case scenario is when the inspected item is in one of the first object files, this object’s tab is active and is one of the first symbols. The worst case is when the item is part of the last object files, the object’s tab is not active and is one of the last symbols to be defined. While inspecting the code lines, the cases are similar, only that they apply to their parent.
+
+\fig[width=\textwidth]{src/img/grafic-best-worst-case.pdf}{img:wbc}{Best and worst cases while inspecting data}
+
+Each file on the graphic represent an additional amount of symbols computed by:
+
+$\mathbf{random(5,10) + \sum\limits_{0}^{F} random(0,2)}, F = number of functions$
+
+As it can be seen in the plot, the best case scenarios are closed to being constant. This was to be expected since there is very little work to do and it’s not affected by the number of files or symbols. The worst case scenario seem to scale well with both number of files and symbols. This of course can be improved, but that will be discussed in \labelindexref{Section}{sec:furth-work}.
+
+
+\section{Feedback}
+\label{sec:feedback}
+
+As stated earlier in this chapter, the project went through a beta testing phase.  Some of the received feedback that was used to make the project better will be presented in this section.
+
+It was said that it feels annoying that the user had to add the linkable files one by one, and that was true for projects with a lot of object files, and now the project can handle multiple file selecting while adding linkable files to the project. Another similar thing that felt out of place was that after adding a file, the file browser would not remember the last directory that was used. Since at that moment the user could only add one file at a time, this didn't feel as it should. Now the file browser correctly remembers the last used directory.
+
+Another thing that was stated is the fact that due to human error an object file view can be closed, but not reopened. The suggestion was to allow adding files after the projects ran to solve this issue, but this could easily add more ways to wrongfully use the project. To fix this issue, the object file tabs are no longer closable without cleaning the project.

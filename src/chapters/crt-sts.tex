@@ -1,0 +1,54 @@
+
+\chapter{Current Status and Further Work}
+\label{chapter:crt-frth}
+
+In this chapter we will present the current state of the project and they ways it can be improved in the near future. Even though the project respects all the required specifications, it can still be greatly improved code-{}wise, scalability-{}wise and design-{}wise. In \labelindexref{Section}{sec:furth-work} will be presented what these improvements are and how can they make the project gradually better.
+
+
+\section{Current Status}
+\label{sec:crt-stat}
+
+Seeing this project slowly develop from a basic text dump to an elaborate program with a complex graphical interface, enables us to say that the project in its current state is ready for release. Functionality and scalability wise, the project does well, as it was stated in \labelindexref{Chapter}{chapter:testing}. In the same section it was presented that the look and feel of it seem straight forward according to the received feedback.
+
+Despite the fact that all the tests show great results, ELF Detective can get even better. In the next subsection we will present what should be improved and why.
+
+\section{Further Work}
+\label{sec:furth-work}
+
+As stated earlier, the project is in a great state, but anything can be improved in time. These improvements are separated by category so they can be easier to isolate for the next person that will work on this project.
+
+\subsection{Coding}
+\label{sub-sec:coding}
+
+Code-{}wise there are two things that can improve how easy the program's code can be understood and it would bring another abstraction layer making it easier for anyone to continue the development of the project.
+
+\fwpara The core library of this project is BFD, which is an old C package that could work better with C++ than it does. It feels that by creating wrappers over the API of this library it would make the code much easier to understand because at its current state it relies on working with a lot of pointers, some of which are allocated, some are not. Replacing small things like \textbf{asymbol**} with \textbf{vector<asymbol>} would make a lot more sense and it would make the data much easier to access. These wrappers would indeed make the program run a bit slower, but this should be tested since most likely the difference should be inconsiderable.
+
+\fwpara Another thing that should be improved is the way the correspondences between the executable and object files work. At this time, these connect on a symbol interrogation level, meaning that each symbol is looked for in a hash map that provides the necessary information. It would be a lot better, and the GUI might work faster if these links are between GUI elements that hold the data, enabling instant access.
+
+\subsection{Functionality}
+\label{sub-sec:func}
+
+\fwpara As seen in \labelindexref{Figure}{img:module-cmp}, the disassembly code is the bottleneck for this project. This is mostly due to working on strings with high-{}level functions that split and replace iteratively. There could be various ways to improve this, but they all need to be tested to find the best way to implement it. Some solutions might be:
+
+\begin{itemize}  
+	\item Using pointers instead of strings 
+	\item Using compiled regular expressions 
+	\item Finding a pattern that allows to change the way strings are currently parsed 
+	\item Keeping the strings as raw data and parsing them on request
+\end{itemize}
+
+\fwpara There is a corner case when the same mov instruction looks differently in another file. Sometimes a simple mov from a register to another might be split in two different mov instructions that use the memory as a buffer. This should be find before displaying the code and it should be marked so it can't be highlighted.
+
+\subsection{Design and User Experience}
+\label{sub-sec:ux}
+
+The user interface currently works as it should and it has a nice look and feel, although there are some features that could provide a better user experience for a niche category of users.
+
+\fwpara Even though the purpose of this program is to provide an educational overview of the linking process, more advanced users might find it to be a good tool to easily inspect ELFs. This category of users are used to using the mouse as little as possible since it slows the work process. In its current state, ELF Detective cannot be used only with the keyboard. It has shortcuts for buttons, it allows arrow movement while inspecting symbols, but it has no support for opening the functions to see the code, to open a certain page or the use the check box. This would bring a better feel to the project and it would increase the amount of users it targets.
+
+\fwpara While testing the application it became clear that adding files repeatedly every time can be annoying. A solution for this would be to allow the user to export the opened files as a project in a file, holding any data needed to allow the reopening of the project. Implementing this would take little time and it would have a great effect in the case of reinspecting the same project often.
+
+\fwpara Another thing that's somewhat similar with the previous point is to add a "Refresh Project" button. This would be useful in case of inspecting a project that you currently work on because refreshing the project would parse all the opened files again, instantly accessing the latest version of the files.
+
+\fwpara Another thing that feels it could be useful is to add the functionality that allows for certain parts of the GUI to pop up in a new window. This would allow the users to isolate only the information they need and by adding the option to export this as raw data as well would let anyone interested to parse the data in any way they need.

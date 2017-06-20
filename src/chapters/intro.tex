@@ -1,0 +1,28 @@
+\chapter{Introduction}
+\label{chapter:intro}
+
+The linking stage is one of the most important topics in computer science and represents a cornerstone for every individual training in this area. While at first is easy to feel like this process is easy to understand, one might find himself to a point where the lack of a god knowledge of this stage led to complications.
+
+The problem is not as obvious as one not knowing what happens during the process, but the lack of a more practical experience, which is hard to gain. Ideally, we could learn about this topic in a less theoretical way, that can form a better background for an individual of any level of expertise. 
+
+Analysing by hand the inputs and the output of this phase will only get you a whole of machine code that gets merged. There's more to linking than that, and the changes are almost unrecognizable unless this is what you aim for, leading to confusion for an unexperienced user.
+
+The project that we present in this paper, ELFDetective, is an educational tool with the goal of helping students understand the changes that occur in the linking process. It offers an interactive interface where it shows all the important data as a comparison between its states in the executable and object files. To find any additional information, the user has to click on any item and it will show the information in an easy to read format that clarifies the "how's" and the "what's" regarding the changes.
+
+\section{Motivation}
+\label{sec:motivation}
+
+Throughout college, computer science students work with ELF files without even knowing at first. Their first 'Hello World' C programs that were written on Linux were ELFs, but they were not aware of that yet. Little after that they started using makefiles and separate the compiling from linking when building a project, which showed them the linkable files, which not only they share the same format with the executable, but they look alike as well. At this point, some may have asked "How does the linker work?", but the theoretical explanation was hard to understand without a proper background. 
+
+We base our  motivation for this project on the fact that many complex topics, in this case the linking process, are a lot harder to understand without a practical example, and even in the case of an example being provided, most often it's too generic. To our knowledge, there are no educational tools allowing an easy exploration of the linking process, and any other program that might help is not beginner friendly.
+
+\section{Objective}
+\label{sec:obj}
+
+Our main objective with this project is to help others understand the linking process better while spending a lot less time. Since there isn't any other tool that has this focus, it had to be an improvement of all the flaws that any other tool of the trade has. These tools offer a text interface only, ELF Detective provides a simple, yet rich, GUI that will allow easy access to any information that's needed. They can only have output for a file at a time, ELF Detective works with projects, which means that by providing an executable file and any number of linkable files, it will gather data from each object that will be mashed together forming a knowledge base that will be compared with the data from the executable file, resulting in a more complex output.
+
+From an education point of view, this project must be able to explain the changes that were found, in the easiest way possible so a student of any background can understand it well. This means that all addresses must be explained, e.g. a symbol is defined at an address because is part of section .bss at offset 0xd or an address is computed based on the instruction pointer etc., any link between the executable and object files is well represented and the wording of the explanation is not too complex.
+
+Our second objective for this project is to be interactive. This means that not only the program will have a good response time, but the GUI will seem straightforward to use. If the user is currently inspecting a project and he wants to know more about any available information, he just has to click on it. This works for both symbols and code lines, and the output not only that explains the requested information as best as it can, but it does it for both the executable file and the object file it came from.
+
+Lastly the project must be correct, have a good response time (under a second) and scale well. We will cover all these topics in \labelindexref{Chapter}{chapter:testing}, where each characteristic of the project will be tested and analysed in order to make sure that this objective is reached.
